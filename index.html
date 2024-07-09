@@ -1,1 +1,85 @@
-<!DOCTYPE html> <html> <head> <title>Firebase Authentication Example</title> <script type="module"> import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js"; import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js"; import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-analytics.js"; import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, TwitterAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js"; const firebaseConfig = { apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU", authDomain: "fixespoint-app.firebaseapp.com", projectId: "fixespoint-app", storageBucket: "fixespoint-app.appspot.com", messagingSenderId: "462898145069", appId: "1:462898145069:web:b1998a949a60d39b9cd5a4", measurementId: "G-03L91TT4X9" }; const app = initializeApp(firebaseConfig); const db = getFirestore(app); const analytics = getAnalytics(app); const auth = getAuth(app); // Sign In with Google async function signInWithGoogle() { const provider = new GoogleAuthProvider(); try { await signInWithPopup(auth, provider); console.log("User signed in with Google"); } catch (e) { console.error("Error signing in with Google: ", e); } } // Sign In with Facebook async function signInWithFacebook() { const provider = new FacebookAuthProvider(); try { await signInWithPopup(auth, provider); console.log("User signed in with Facebook"); } catch (e) { console.error("Error signing in with Facebook: ", e); } } // Sign In with Twitter async function signInWithTwitter() { const provider = new TwitterAuthProvider(); try { await signInWithPopup(auth, provider); console.log("User signed in with Twitter"); } catch (e) { console.error("Error signing in with Twitter: ", e); } } // Sign Up async function signUp() { const usernameInput = document.getElementById('usernameInput'); const emailInput = document.getElementById('emailInput'); const passwordInput = document.getElementById('passwordInput'); const username = usernameInput.value; const email = emailInput.value; const password = passwordInput.value; try { const userCredential = await createUserWithEmailAndPassword(auth, email, password); const user = userCredential.user; // Store user data in Firestore await addDoc(collection(db, "users"), { username: username, email: email, userId: user.uid }); console.log("User signed up and data stored in Firestore"); } catch (e) { console.error("Error signing up: ", e); } } // Sign In async function signIn() { const emailInput = document.getElementById('emailInput'); const passwordInput = document.getElementById('passwordInput'); const email = emailInput.value; const password = passwordInput.value; try { await signInWithEmailAndPassword(auth, email, password); console.log("User signed in"); } catch (e) { console.error("Error signing in: ", e); } } // Reset Password async function resetPassword() { const emailInput = document.getElementById('emailInput'); const email = emailInput.value; try { await sendPasswordResetEmail(auth, email); console.log("Password reset email sent"); } catch (e) { console.error("Error sending password reset email: ", e); } } </script> </head> <body> <h1>Firebase Authentication Example</h1> <h2>Sign In with Social Providers</h2> <button onclick="signInWithGoogle()">Sign In with Google</button> <button onclick="signInWithFacebook()">Sign In with Facebook</button> <button onclick="signInWithTwitter()">Sign In with Twitter</button> <h2>Sign Up</h2> <input type="text" id="usernameInput" placeholder="Username"> <input type="email" id="emailInput" placeholder="Email"> <input type="password" id="passwordInput" placeholder="Password"> <button onclick="signUp()">Sign Up</button> <h2>Sign In</h2> <input type="email" id="emailInput" placeholder="Email"> <input type="password" id="passwordInput" placeholder="Password"> <button onclick="signIn()">Sign In</button> <h2>Reset Password</h2> <input type="email" id="emailInput" placeholder="Email"> <button onclick="resetPassword()">Reset Password</button> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register & Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="firebase-config.js"></script>
+</head>
+<body>
+    <div class="container" id="signup" style="display:none;">
+      <h1 class="form-title">Register</h1>
+      <form method="post" action="">
+        <div id="signUpMessage" class="messageDiv" style="display:none;"></div>
+        <div class="input-group">
+           <i class="fas fa-user"></i>
+           <input type="text"  id="fName" placeholder="First Name" required>
+           <label for="fname">First Name</label>
+        </div>
+        <div class="input-group">
+            <i class="fas fa-user"></i>
+            <input type="text"  id="lName" placeholder="Last Name" required>
+            <label for="lName">Last Name</label>
+        </div>
+        <div class="input-group">
+            <i class="fas fa-envelope"></i>
+            <input type="email"  id="rEmail" placeholder="Email" required>
+            <label for="rEmail">Email</label>
+        </div>
+        <div class="input-group">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="rPassword"  placeholder="Password" required>
+            <label for="rPassword">Password</label>
+        </div>
+       <button class="btn" id="submitSignUp" >Sign Up</button>
+      </form>
+      <p class="or">
+        ----------or--------
+      </p>
+      <div class="icons">
+        <i class="fab fa-google"></i>
+        <i class="fab fa-facebook"></i>
+      </div>
+      <div class="links">
+        <p>Already Have Account ?</p>
+        <button id="signInButton">Sign In</button>
+      </div>
+    </div>
+
+  <div class="container" id="signIn">
+        <h1 class="form-title">Sign In</h1>
+        <form method="post" action="">
+          <div id="signInMessage" class="messageDiv" style="display:none;"></div>
+
+          <div class="input-group">
+              <i class="fas fa-envelope"></i>
+              <input type="email"  id="email" placeholder="Email" required>
+              <label for="email">Email</label>
+          </div>
+          <div class="input-group">
+              <i class="fas fa-lock"></i>
+            <input type="password" id="password"  placeholder="Password" required>
+              <label for="password">Password</label>
+          </div>
+          <p class="recover">
+            <a href="#">Recover Password</a>
+          </p>
+         <button  class="btn"  id="submitSignIn">Sign In</button>
+        </form>
+        <p class="or">
+          ----------or--------
+        </p>
+        <div class="icons">
+          <i class="fab fa-google"></i>
+          <i class="fab fa-facebook"></i>
+        </div>
+        <div class="links">
+          <p>Don't have account yet?</p>
+          <button id="signUpButton">Sign Up</button>
+        </div>
+      </div>
+      <script src="ui.js"></script>
+</body>
+</html>
