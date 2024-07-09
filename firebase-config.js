@@ -7,7 +7,6 @@
 const firebaseConfig = {
     apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
     authDomain: "fixespoint-app.firebaseapp.com",
-    databaseURL: "https://fixespoint-app-default-rtdb.firebaseio.com",
     projectId: "fixespoint-app",
     storageBucket: "fixespoint-app.appspot.com",
     messagingSenderId: "462898145069",
