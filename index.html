@@ -1,85 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register & Login</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-    <script type="module" src="firebase-config.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 24px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 10px;
+      background-color: #007BFF;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .message {
+      display: none;
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container" id="signup" style="display:none;">
-      <h1 class="form-title">Register</h1>
-      <form method="post" action="">
-        <div id="signUpMessage" class="messageDiv" style="display:none;"></div>
-        <div class="input-group">
-           <i class="fas fa-user"></i>
-           <input type="text"  id="fName" placeholder="First Name" required>
-           <label for="fname">First Name</label>
-        </div>
-        <div class="input-group">
-            <i class="fas fa-user"></i>
-            <input type="text"  id="lName" placeholder="Last Name" required>
-            <label for="lName">Last Name</label>
-        </div>
-        <div class="input-group">
-            <i class="fas fa-envelope"></i>
-            <input type="email"  id="rEmail" placeholder="Email" required>
-            <label for="rEmail">Email</label>
-        </div>
-        <div class="input-group">
-            <i class="fas fa-lock"></i>
-            <input type="password" id="rPassword"  placeholder="Password" required>
-            <label for="rPassword">Password</label>
-        </div>
-       <button class="btn" id="submitSignUp" >Sign Up</button>
-      </form>
-      <p class="or">
-        ----------or--------
-      </p>
-      <div class="icons">
-        <i class="fab fa-google"></i>
-        <i class="fab fa-facebook"></i>
-      </div>
-      <div class="links">
-        <p>Already Have Account ?</p>
-        <button id="signInButton">Sign In</button>
-      </div>
-    </div>
+  <div class="container">
+    <h2>Login</h2>
+    <button id="googleSignIn" class="btn">Sign in with Google</button>
+    <button id="facebookSignIn" class="btn">Sign in with Facebook</button>
+    <button id="twitterSignIn" class="btn">Sign in with Twitter</button>
+    <div id="signInMessage" class="message"></div>
+  </div>
 
-  <div class="container" id="signIn">
-        <h1 class="form-title">Sign In</h1>
-        <form method="post" action="">
-          <div id="signInMessage" class="messageDiv" style="display:none;"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, TwitterAuthProvider } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
 
-          <div class="input-group">
-              <i class="fas fa-envelope"></i>
-              <input type="email"  id="email" placeholder="Email" required>
-              <label for="email">Email</label>
-          </div>
-          <div class="input-group">
-              <i class="fas fa-lock"></i>
-            <input type="password" id="password"  placeholder="Password" required>
-              <label for="password">Password</label>
-          </div>
-          <p class="recover">
-            <a href="#">Recover Password</a>
-          </p>
-         <button  class="btn"  id="submitSignIn">Sign In</button>
-        </form>
-        <p class="or">
-          ----------or--------
-        </p>
-        <div class="icons">
-          <i class="fab fa-google"></i>
-          <i class="fab fa-facebook"></i>
-        </div>
-        <div class="links">
-          <p>Don't have account yet?</p>
-          <button id="signUpButton">Sign Up</button>
-        </div>
-      </div>
-      <script src="ui.js"></script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
+      authDomain: "fixespoint-app.firebaseapp.com",
+      databaseURL: "https://fixespoint-app-default-rtdb.firebaseio.com",
+      projectId: "fixespoint-app",
+      storageBucket: "fixespoint-app.appspot.com",
+      messagingSenderId: "462898145069",
+      appId: "1:462898145069:web:b1998a949a60d39b9cd5a4",
+      measurementId: "G-03L91TT4X9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+
+    const googleSignInButton = document.getElementById('googleSignIn');
+    googleSignInButton.addEventListener('click', async () => {
+      try {
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(auth, provider);
+        // Redirect or handle successful sign-in
+        window.location.href = 'https://fixespoint.com/app'; // Redirect to Fixespoint.com/app
+      } catch (error) {
+        console.error('Error signing in with Google:', error);
+        showMessage('Failed to sign in with Google', 'signInMessage');
+      }
+    });
+
+    const facebookSignInButton = document.getElementById('facebookSignIn');
+    facebookSignInButton.addEventListener('click', async () => {
+      try {
+        const provider = new FacebookAuthProvider();
+        await signInWithPopup(auth, provider);
+        // Redirect or handle successful sign-in
+        window.location.href = 'https://fixespoint.com/app'; // Redirect to Fixespoint.com/app
+      } catch (error) {
+        console.error('Error signing in with Facebook:', error);
+        showMessage('Failed to sign in with Facebook', 'signInMessage');
+      }
+    });
+
+    const twitterSignInButton = document.getElementById('twitterSignIn');
+    twitterSignInButton.addEventListener('click', async () => {
+      try {
+        const provider = new TwitterAuthProvider();
+        await signInWithPopup(auth, provider);
+        // Redirect or handle successful sign-in
+        window.location.href = 'https://fixespoint.com/app'; // Redirect to Fixespoint.com/app
+      } catch (error) {
+        console.error('Error signing in with Twitter:', error);
+        showMessage('Failed to sign in with Twitter', 'signInMessage');
+      }
+    });
+
+    function showMessage(message, divId) {
+      const messageDiv = document.getElementById(divId);
+      messageDiv.textContent = message;
+      messageDiv.style.display = 'block';
+    }
+  </script>
 </body>
 </html>
