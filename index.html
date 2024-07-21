@@ -1,132 +1,197 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
+<title>Phone Authentication</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-auth-compat.js"></script>
+<style>
+body {
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f4f4f4;
+}
 
-    .container {
-      background-color: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
+.container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
 
-    h2 {
-      margin-top: 0;
-      font-size: 24px;
-    }
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
 
-    .btn {
-      padding: 10px 20px;
-      margin: 10px;
-      background-color: #007BFF;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      border-radius: 4px;
-      font-size: 16px;
-    }
+input[type="tel"],
+input[type="text"] {
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
 
-    .btn:hover {
-      background-color: #0056b3;
-    }
+button {
+    background-color: #007bff;
+    color: #fff;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
 
-    .message {
-      display: none;
-      margin-top: 20px;
-      padding: 10px;
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-      border-radius: 4px;
-    }
-  </style>
+button:hover {
+    background-color: #0056b3;
+}
+
+#sendCodeSpinner {
+    display: none;
+    margin-left: 10px;
+}
+
+#phoneSignInMessage {
+    text-align: center;
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h2>Login</h2>
-    <button id="googleSignIn" class="btn">Sign in with Google</button>
-    <button id="facebookSignIn" class="btn">Sign in with Facebook</button>
-    <button id="twitterSignIn" class="btn">Sign in with Twitter</button>
-    <div id="signInMessage" class="message"></div>
+
+<div class="container">
+  <h2>Phone Authentication</h2>
+  <div id="phoneSignInForm">
+    <input type="tel" id="phoneNumber" placeholder="+[country code][phone number]" required>
+    <button id="sendCodeButton">Send Code</button>
+    <div id="sendCodeSpinner" style="display: none;">Loading...</div> 
+    <div id="recaptcha-container"></div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, FacebookAuthProvider, TwitterAuthProvider } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
+  <div id="verifyCodeForm" style="display: none;">
+    <input type="text" id="verificationCode" placeholder="Verification Code" required>
+    <button id="verifyCodeButton">Verify Code</button>
+  </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
-      authDomain: "fixespoint-app.firebaseapp.com",
-      databaseURL: "https://fixespoint-app-default-rtdb.firebaseio.com",
-      projectId: "fixespoint-app",
-      storageBucket: "fixespoint-app.appspot.com",
-      messagingSenderId: "462898145069",
-      appId: "1:462898145069:web:b1998a949a60d39b9cd5a4",
-      measurementId: "G-03L91TT4X9"
-    };
+  <div id="phoneSignInMessage"></div>
+</div>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
+<script>
+// Replace with your actual Firebase project configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
+    authDomain: "fixespoint-app.firebaseapp.com",
+    databaseURL: "https://fixespoint-app-default-rtdb.firebaseio.com",
+    projectId: "fixespoint-app",
+    storageBucket: "fixespoint-app.appspot.com",
+    messagingSenderId: "462898145069",
+    appId: "1:462898145069:web:b1998a949a60d39b9cd5a4",
+    measurementId: "G-03L91TT4X9"
+  };
 
-    const googleSignInButton = document.getElementById('googleSignIn');
-    googleSignInButton.addEventListener('click', async () => {
-      try {
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
-        // Redirect or handle successful sign-in
-        window.location.href = 'https://fixespoint.com/app'; // Redirect to Fixespoint.com/app
-      } catch (error) {
-        console.error('Error signing in with Google:', error);
-        showMessage('Failed to sign in with Google', 'signInMessage');
-      }
-    });
+firebase.initializeApp(firebaseConfig);
 
-    const facebookSignInButton = document.getElementById('facebookSignIn');
-    facebookSignInButton.addEventListener('click', async () => {
-      try {
-        const provider = new FacebookAuthProvider();
-        await signInWithPopup(auth, provider);
-        // Redirect or handle successful sign-in
-        window.location.href = 'https://fixespoint.com/app'; // Redirect to Fixespoint.com/app
-      } catch (error) {
-        console.error('Error signing in with Facebook:', error);
-        showMessage('Failed to sign in with Facebook', 'signInMessage');
-      }
-    });
+const auth = firebase.auth();
+const recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+    'size': 'invisible' 
+}, auth);
 
-    const twitterSignInButton = document.getElementById('twitterSignIn');
-    twitterSignInButton.addEventListener('click', async () => {
-      try {
-        const provider = new TwitterAuthProvider();
-        await signInWithPopup(auth, provider);
-        // Redirect or handle successful sign-in
-        window.location.href = 'https://fixespoint.com/app'; // Redirect to Fixespoint.com/app
-      } catch (error) {
-        console.error('Error signing in with Twitter:', error);
-        showMessage('Failed to sign in with Twitter', 'signInMessage');
-      }
-    });
 
-    function showMessage(message, divId) {
-      const messageDiv = document.getElementById(divId);
-      messageDiv.textContent = message;
-      messageDiv.style.display = 'block';
-    }
-  </script>
+// Function to display messages with fading effect
+function showMessage(message, isSuccess) {
+    const messageDiv = document.getElementById('phoneSignInMessage');
+    messageDiv.classList.remove('success', 'error');
+    messageDiv.classList.add(isSuccess ? 'success' : 'error');
+    messageDiv.textContent = message;
+    messageDiv.style.display = "block";
+    messageDiv.style.opacity = 1;
+    setTimeout(() => {
+      messageDiv.style.opacity = 0;
+    }, 5000); // Fade out after 5 seconds
+}
+
+
+async function sendVerificationCode() {
+  const phoneNumberInput = document.getElementById('phoneNumber');
+  const phoneNumber = phoneNumberInput.value.trim();
+
+  const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+  if (!phoneRegex.test(phoneNumber)) {
+    showMessage("Please enter a valid phone number.", false);
+    return;
+  }
+
+  try {
+    // ... (show loading indicator, same as before)
+
+    await recaptchaVerifier.render(); // Render reCAPTCHA only when needed
+    const confirmationResult = await firebase.auth().signInWithPhoneNumber(phoneNumber, recaptchaVerifier);
+    window.confirmationResult = confirmationResult;
+    document.getElementById('phoneSignInForm').style.display = 'none';
+    document.getElementById('verifyCodeForm').style.display = 'block';
+    showMessage("Verification code sent. Please check your phone.", true);
+  } catch (error) {
+    console.error("Verification code error:", error);
+    handleVerificationCodeError(error);
+  } finally {
+    // ... (hide loading indicator, same as before)
+  }
+}
+
+// Function to handle verification code errors
+function handleVerificationCodeError(error) {
+  if (error.code === 'auth/invalid-phone-number') {
+    showMessage('Invalid phone number. Please try again.', false);
+  } else if (error.code === 'auth/quota-exceeded' || error.code === 'auth/too-many-requests') {
+    showMessage('Too many requests. Please try again later.', false);
+  } else if (error.code.startsWith('auth/')) { // Firebase Auth error
+    showMessage(error.message, false); 
+  } else {
+    showMessage('An error occurred. Please try again later.', false);
+  }
+}
+
+async function verifyCode() {
+  const verificationCode = document.getElementById('verificationCode').value;
+
+  try {
+    const result = await window.confirmationResult.confirm(verificationCode);
+    showMessage('Successfully signed in! Redirecting...', true);
+    setTimeout(() => {
+      window.location.href = 'https://fixespoint.com/app'; // Or your desired redirect URL
+    }, 2000);
+  } catch (error) {
+    console.error("Verification error:", error);
+    if (error.code === 'auth/invalid-verification-code') {
+      showMessage('Invalid verification code. Please try again.', false);
+    } else if (error.code === 'auth/code-expired') {
+      showMessage('Verification code has expired. Please request a new one.', false);
+    } else {
+      showMessage('An error occurred. Please try again later.', false); 
+    } 
+  }
+}
+// Event Listeners
+document.getElementById('sendCodeButton').addEventListener('click', sendVerificationCode);
+document.getElementById('verifyCodeButton').addEventListener('click', verifyCode);
+</script>
+
 </body>
 </html>
