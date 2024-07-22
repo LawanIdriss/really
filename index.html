@@ -4,13 +4,70 @@
 <meta charset="utf-8">
 <title>Number verification with OTP</title>
 <style>
-	/* ... your existing styles (including #phoneSignInMessage styles) ... */
+	.container {
+		width: 302px;
+		height: 175px;
+		position: absolute;
+		left: 0px;
+		right: 0px;
+		top: 0px;
+		bottom: 0px;
+		margin: auto;
+	}
+	#number, #verificationcode, #pFullName, #pEmail, #pPassword, #pConfirmPassword {
+		width: calc(100% - 24px);
+		padding: 10px;
+		font-size: 20px;
+		margin-bottom: 5px;
+		outline: none;
+	}
+	#recaptcha-container {
+		margin-bottom: 5px;
+	}
+	#send, #verify, #submitSignup {
+		width: 100%;
+		height: 40px;
+		outline: none;
+	}
+	.p-conf, .n-conf {
+		width: calc(100% - 22px);
+		border: 2px solid green;
+		border-radius: 4px;
+		padding: 8px 10px;
+		margin: 4px 0px;
+		background-color: rgba(0, 249, 12, 0.5);
+		display: none;
+	}
+	.n-conf {
+		border-color: red;
+		background-color: rgba(255, 0, 4, 0.5);
+	}
+    #phoneSignInMessage {
+        width: calc(100% - 22px);
+        border: 2px solid;
+        border-radius: 4px;
+        padding: 8px 10px;
+        margin: 4px 0px;
+        display: none;
+        transition: opacity 0.5s ease-in-out;
+    }
+    #phoneSignInMessage.success {
+        border-color: green;
+        background-color: rgba(0, 249, 12, 0.5);
+    }
+    #phoneSignInMessage.error {
+        border-color: red;
+        background-color: rgba(255, 0, 4, 0.5);
+    }
+    #completeSignupForm { 
+        display: none;
+    }
 </style>
 </head>
 
 <body>
 <div class="container">
-    <div id="phoneSignInMessage"></div> 
+    <div id="phoneSignInMessage"></div>
     <div id="sender">
         <input type="text" id="phoneNumber" placeholder="+923...">
         <div id="recaptcha-container"></div>
@@ -21,12 +78,23 @@
         <input type="text" id="verificationCode" placeholder="OTP Code">
         <input type="button" id="verifyCodeButton" value="Verify" onclick="codeverify()">
     </div>
+
+    <div id="completeSignupForm" style="display: none;">
+        <h2>Complete Sign Up</h2>
+        <p>If you're seeing this, it's your first time signing in. Please add your details below. Next time, you can sign in with your phone number only.</p>
+        <input type="text" id="pFullName" placeholder="Full Name">
+        <input type="email" id="pEmail" placeholder="Email">
+        <input type="password" id="pPassword" placeholder="Password">
+        <input type="password" id="pConfirmPassword" placeholder="Confirm Password">
+        <button type="button" id="submitSignup">Sign Up</button>
+    </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-firestore-compat.js"></script>
 <script>
-    // Firebase configuration (your provided values)
+    // Firebase configuration
     const firebaseConfig = {
         apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
         authDomain: "fixespoint-app.firebaseapp.com",
@@ -39,19 +107,27 @@
     };
 
     firebase.initializeApp(firebaseConfig);
+  
+  // Initialize reCAPTCHA
+  function render(){
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container');
+    recaptchaVerifier.render();
+  }
 
-    // Render reCAPTCHA (same as before)
-    function render() {
-        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container');
-        recaptchaVerifier.render();
-    }
-
-    // Function to display messages (same as before)
+    // Function to display messages with fading effect
     function showMessage(message, isSuccess) {
-        // ... (code for showMessage function) ...
+        const messageDiv = document.getElementById('phoneSignInMessage');
+        messageDiv.classList.remove('success', 'error');
+        messageDiv.classList.add(isSuccess ? 'success' : 'error');
+        messageDiv.textContent = message;
+        messageDiv.style.display = "block";
+        messageDiv.style.opacity = 1;
+        setTimeout(() => {
+            messageDiv.style.opacity = 0;
+        }, 5000); // Fade out after 5 seconds
     }
 
-    // Function to send verification code (phoneAuth)
+    // Function to initiate phone authentication
     function phoneAuth() {
         var number = document.getElementById('phoneNumber').value;
         firebase.auth().signInWithPhoneNumber(number, window.recaptchaVerifier)
@@ -62,27 +138,90 @@
                 showMessage('Verification code sent. Please check your phone.', true);
             })
             .catch(function(error) {
-                showMessage(error.message, false); 
+                showMessage(error.message, false);
             });
     }
 
-    // Function to verify code (codeverify)
-    function codeverify() {
-        var code = document.getElementById('verificationCode').value;
-        window.confirmationResult.confirm(code)
-            .then(function() {
+    // Function to verify code and handle sign-up
+    async function codeverify() {
+        const code = document.getElementById('verificationCode').value;
+        try {
+            await window.confirmationResult.confirm(code);
+            const phoneNumber = document.getElementById('phoneNumber').value;
+
+            const db = firebase.firestore();
+            const usersRef = db.collection('users');
+            const userSnapshot = await usersRef.where('phoneNumber', '==', phoneNumber).get();
+
+            if (userSnapshot.empty) {
+                // Show sign-up form if user doesn't exist
+                document.getElementById('verifier').style.display = 'none';
+                document.getElementById('completeSignupForm').style.display = 'block';
+
+                // Handle sign-up form submission
+                document.getElementById('submitSignup').addEventListener('click', async () => {
+                    const fullName = document.getElementById('pFullName').value.trim();
+                    const email = document.getElementById('pEmail').value;
+                    const password = document.getElementById('pPassword').value;
+                    const confirmPassword = document.getElementById('pConfirmPassword').value;
+
+                    // Split full name into first and last names
+                    const names = fullName.split(' ');
+                    const firstName = names[0];
+                    const lastName = names.length > 1 ? names.slice(1).join(' ') : ''; 
+
+                    // Input validation
+                    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+                        showMessage('Please fill in all fields.', false);
+                        return;
+                    }
+
+                    if (password !== confirmPassword) {
+                        showMessage('Passwords do not match.', false);
+                        return;
+                    }
+
+                    // Basic email validation (you might want to use a more robust regex)
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(email)) {
+                        showMessage('Please enter a valid email address.', false);
+                        return;
+                    }
+
+                    try {
+                        // Create Firebase user with email/password
+                        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                        const user = userCredential.user;
+
+                        // Save user data to Firestore with trimmed first and last names
+                        await usersRef.doc(user.uid).set({
+                            firstName: firstName,
+                            lastName: lastName,
+                            email: email,
+                            phoneNumber: phoneNumber
+                        });
+
+                        showMessage('Sign-up successful! Redirecting...', true);
+                        setTimeout(function() {
+                            window.location.href = 'https://fixespoint.com/app'; 
+                        }, 2000); 
+                    } catch (error) {
+                        showMessage('Error during sign-up: ' + error.message, false);
+                    }
+                });
+            } else {
                 showMessage('Number Verified! Redirecting...', true);
-                // Redirect after a short delay
                 setTimeout(function() {
                     window.location.href = 'https://fixespoint.com/app'; 
-                }, 2000); // 2 seconds (adjust as needed)
-            })
-            .catch(function(error) {
-                showMessage('OTP Error: ' + error.message, false);
-            });
+                }, 2000); 
+            }
+        } catch (error) {
+            showMessage('OTP Error: ' + error.message, false);
+        }
     }
 
     render(); // Initial reCAPTCHA setup
 </script>
+
 </body>
 </html>
