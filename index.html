@@ -71,7 +71,11 @@
         var code = document.getElementById('verificationCode').value;
         window.confirmationResult.confirm(code)
             .then(function() {
-                showMessage('Number Verified', true);
+                showMessage('Number Verified! Redirecting...', true);
+                // Redirect after a short delay
+                setTimeout(function() {
+                    window.location.href = 'https://fixespoint.com/app'; 
+                }, 2000); // 2 seconds (adjust as needed)
             })
             .catch(function(error) {
                 showMessage('OTP Error: ' + error.message, false);
