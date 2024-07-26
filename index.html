@@ -1,227 +1,93 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Number verification with OTP</title>
-<style>
-	.container {
-		width: 302px;
-		height: 175px;
-		position: absolute;
-		left: 0px;
-		right: 0px;
-		top: 0px;
-		bottom: 0px;
-		margin: auto;
-	}
-	#number, #verificationcode, #pFullName, #pEmail, #pPassword, #pConfirmPassword {
-		width: calc(100% - 24px);
-		padding: 10px;
-		font-size: 20px;
-		margin-bottom: 5px;
-		outline: none;
-	}
-	#recaptcha-container {
-		margin-bottom: 5px;
-	}
-	#send, #verify, #submitSignup {
-		width: 100%;
-		height: 40px;
-		outline: none;
-	}
-	.p-conf, .n-conf {
-		width: calc(100% - 22px);
-		border: 2px solid green;
-		border-radius: 4px;
-		padding: 8px 10px;
-		margin: 4px 0px;
-		background-color: rgba(0, 249, 12, 0.5);
-		display: none;
-	}
-	.n-conf {
-		border-color: red;
-		background-color: rgba(255, 0, 4, 0.5);
-	}
-    #phoneSignInMessage {
-        width: calc(100% - 22px);
-        border: 2px solid;
-        border-radius: 4px;
-        padding: 8px 10px;
-        margin: 4px 0px;
-        display: none;
-        transition: opacity 0.5s ease-in-out;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google One Tap Authentication</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
+  <style>
+    /* Add any specific styles to ensure layout isn't broken */
+    body {
+      position: relative;
+      min-height: 100vh;
     }
-    #phoneSignInMessage.success {
-        border-color: green;
-        background-color: rgba(0, 249, 12, 0.5);
+
+    /* Ensuring that Google One Tap prompt is correctly positioned */
+    #g_id_onload, .g_id_signin {
+      position: absolute;
+      top: 0; /* Adjust based on your layout */
+      left: 0; /* Adjust based on your layout */
+      z-index: 9999; /* Ensure it's above other elements */
     }
-    #phoneSignInMessage.error {
-        border-color: red;
-        background-color: rgba(255, 0, 4, 0.5);
-    }
-    #completeSignupForm { 
-        display: none;
-    }
-</style>
-</head>
-
-<body>
-<div class="container">
-    <div id="phoneSignInMessage"></div>
-    <div id="sender">
-        <input type="text" id="phoneNumber" placeholder="+923...">
-        <div id="recaptcha-container"></div>
-        <input type="button" id="sendCodeButton" value="Send" onclick="phoneAuth()">
-    </div>
-
-    <div id="verifier" style="display: none">
-        <input type="text" id="verificationCode" placeholder="OTP Code">
-        <input type="button" id="verifyCodeButton" value="Verify" onclick="codeverify()">
-    </div>
-
-    <div id="completeSignupForm" style="display: none;">
-        <h2>Complete Sign Up</h2>
-        <p>If you're seeing this, it's your first time signing in. Please add your details below. Next time, you can sign in with your phone number only.</p>
-        <input type="text" id="pFullName" placeholder="Full Name">
-        <input type="email" id="pEmail" placeholder="Email">
-        <input type="password" id="pPassword" placeholder="Password">
-        <input type="password" id="pConfirmPassword" placeholder="Confirm Password">
-        <button type="button" id="submitSignup">Sign Up</button>
-    </div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.12.1/firebase-firestore-compat.js"></script>
-<script>
-    // Firebase configuration
+  </style>
+  <script>
+    // Your web app's Firebase configuration
     const firebaseConfig = {
-        apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
-        authDomain: "fixespoint-app.firebaseapp.com",
-        databaseURL: "https://fixespoint-app-default-rtdb.firebaseio.com",
-        projectId: "fixespoint-app",
-        storageBucket: "fixespoint-app.appspot.com",
-        messagingSenderId: "462898145069",
-        appId: "1:462898145069:web:b1998a949a60d39b9cd5a4",
-        measurementId: "G-03L91TT4X9"
+      apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
+      authDomain: "fixespoint-app.firebaseapp.com",
+      projectId: "fixespoint-app",
+      storageBucket: "fixespoint-app.appspot.com",
+      messagingSenderId: "462898145069",
+      appId: "1:462898145069:web:b1998a949a60d39b9cd5a4",
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-  
-  // Initialize reCAPTCHA
-  function render(){
-    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container');
-    recaptchaVerifier.render();
-  }
 
-    // Function to display messages with fading effect
-    function showMessage(message, isSuccess) {
-        const messageDiv = document.getElementById('phoneSignInMessage');
-        messageDiv.classList.remove('success', 'error');
-        messageDiv.classList.add(isSuccess ? 'success' : 'error');
-        messageDiv.textContent = message;
-        messageDiv.style.display = "block";
-        messageDiv.style.opacity = 1;
-        setTimeout(() => {
-            messageDiv.style.opacity = 0;
-        }, 5000); // Fade out after 5 seconds
-    }
+    window.onload = function() {
+      // Initialize Google One Tap
+      google.accounts.id.initialize({
+        client_id: '462898145069-o5gme6h0o8aq4rr7e7ee3j34c50rpnsr.apps.googleusercontent.com',
+        callback: handleCredentialResponse,
+        cancel_on_tap_outside: false,  // Keep the prompt open if the user clicks outside
+      });
 
-    // Function to initiate phone authentication
-    function phoneAuth() {
-        var number = document.getElementById('phoneNumber').value;
-        firebase.auth().signInWithPhoneNumber(number, window.recaptchaVerifier)
-            .then(function(confirmationResult) {
-                window.confirmationResult = confirmationResult;
-                document.getElementById('sender').style.display = 'none';
-                document.getElementById('verifier').style.display = 'block';
-                showMessage('Verification code sent. Please check your phone.', true);
-            })
-            .catch(function(error) {
-                showMessage(error.message, false);
-            });
-    }
-
-    // Function to verify code and handle sign-up
-    async function codeverify() {
-        const code = document.getElementById('verificationCode').value;
-        try {
-            await window.confirmationResult.confirm(code);
-            const phoneNumber = document.getElementById('phoneNumber').value;
-
-            const db = firebase.firestore();
-            const usersRef = db.collection('users');
-            const userSnapshot = await usersRef.where('phoneNumber', '==', phoneNumber).get();
-
-            if (userSnapshot.empty) {
-                // Show sign-up form if user doesn't exist
-                document.getElementById('verifier').style.display = 'none';
-                document.getElementById('completeSignupForm').style.display = 'block';
-
-                // Handle sign-up form submission
-                document.getElementById('submitSignup').addEventListener('click', async () => {
-                    const fullName = document.getElementById('pFullName').value.trim();
-                    const email = document.getElementById('pEmail').value;
-                    const password = document.getElementById('pPassword').value;
-                    const confirmPassword = document.getElementById('pConfirmPassword').value;
-
-                    // Split full name into first and last names
-                    const names = fullName.split(' ');
-                    const firstName = names[0];
-                    const lastName = names.length > 1 ? names.slice(1).join(' ') : ''; 
-
-                    // Input validation
-                    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-                        showMessage('Please fill in all fields.', false);
-                        return;
-                    }
-
-                    if (password !== confirmPassword) {
-                        showMessage('Passwords do not match.', false);
-                        return;
-                    }
-
-                    // Basic email validation (you might want to use a more robust regex)
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!emailRegex.test(email)) {
-                        showMessage('Please enter a valid email address.', false);
-                        return;
-                    }
-
-                    try {
-                        // Create Firebase user with email/password
-                        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-                        const user = userCredential.user;
-
-                        // Save user data to Firestore with trimmed first and last names
-                        await usersRef.doc(user.uid).set({
-                            firstName: firstName,
-                            lastName: lastName,
-                            email: email,
-                            phoneNumber: phoneNumber
-                        });
-
-                        showMessage('Sign-up successful! Redirecting...', true);
-                        setTimeout(function() {
-                            window.location.href = 'https://fixespoint.com/app'; 
-                        }, 2000); 
-                    } catch (error) {
-                        showMessage('Error during sign-up: ' + error.message, false);
-                    }
-                });
-            } else {
-                showMessage('Number Verified! Redirecting...', true);
-                setTimeout(function() {
-                    window.location.href = 'https://fixespoint.com/app'; 
-                }, 2000); 
-            }
-        } catch (error) {
-            showMessage('OTP Error: ' + error.message, false);
+      // Show the One Tap UI
+      google.accounts.id.prompt((notification) => {
+        // Check if the user dismisses the prompt
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          console.log('One Tap prompt not displayed or skipped');
+        } else {
+          // Set a timeout to hide the prompt after 10 seconds
+          setTimeout(() => {
+            google.accounts.id.cancel();
+          }, 10000); // 10 seconds
         }
+      });
+    };
+
+    function handleCredentialResponse(response) {
+      // Get the ID token from the response
+      const idToken = response.credential;
+
+      // Authenticate with Firebase
+      firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(idToken))
+        .then((result) => {
+          // User signed in successfully
+          const user = result.user;
+
+          // Store user data in local storage
+          localStorage.setItem('user', JSON.stringify({
+            uid: user.uid,
+            displayName: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL
+          }));
+
+          // Redirect to the app
+          window.location.href = 'https://fixespoint.com/app';
+        })
+        .catch((error) => {
+          // Handle errors here
+          console.error('Error signing in: ', error);
+        });
     }
-
-    render(); // Initial reCAPTCHA setup
-</script>
-
+  </script>
+</head>
+<body>
+  <!-- Your existing content -->
+  <button id="loginButton">Login</button>
 </body>
 </html>
