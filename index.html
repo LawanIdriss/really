@@ -1,93 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Google One Tap Authentication</title>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
-  <style>
-    /* Add any specific styles to ensure layout isn't broken */
-    body {
-      position: relative;
-      min-height: 100vh;
-    }
-
-    /* Ensuring that Google One Tap prompt is correctly positioned */
-    #g_id_onload, .g_id_signin {
-      position: absolute;
-      top: 0; /* Adjust based on your layout */
-      left: 0; /* Adjust based on your layout */
-      z-index: 9999; /* Ensure it's above other elements */
-    }
-  </style>
-  <script>
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
-      authDomain: "fixespoint-app.firebaseapp.com",
-      projectId: "fixespoint-app",
-      storageBucket: "fixespoint-app.appspot.com",
-      messagingSenderId: "462898145069",
-      appId: "1:462898145069:web:b1998a949a60d39b9cd5a4",
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-
-    window.onload = function() {
-      // Initialize Google One Tap
-      google.accounts.id.initialize({
-        client_id: '462898145069-o5gme6h0o8aq4rr7e7ee3j34c50rpnsr.apps.googleusercontent.com',
-        callback: handleCredentialResponse,
-        cancel_on_tap_outside: false,  // Keep the prompt open if the user clicks outside
-      });
-
-      // Show the One Tap UI
-      google.accounts.id.prompt((notification) => {
-        // Check if the user dismisses the prompt
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          console.log('One Tap prompt not displayed or skipped');
-        } else {
-          // Set a timeout to hide the prompt after 10 seconds
-          setTimeout(() => {
-            google.accounts.id.cancel();
-          }, 10000); // 10 seconds
+    <title>Google One Tap Integration</title>
+    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        #g_id_onload {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
         }
-      });
-    };
 
-    function handleCredentialResponse(response) {
-      // Get the ID token from the response
-      const idToken = response.credential;
-
-      // Authenticate with Firebase
-      firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(idToken))
-        .then((result) => {
-          // User signed in successfully
-          const user = result.user;
-
-          // Store user data in local storage
-          localStorage.setItem('user', JSON.stringify({
-            uid: user.uid,
-            displayName: user.displayName,
-            email: user.email,
-            photoURL: user.photoURL
-          }));
-
-          // Redirect to the app
-          window.location.href = 'https://fixespoint.com/app';
-        })
-        .catch((error) => {
-          // Handle errors here
-          console.error('Error signing in: ', error);
-        });
-    }
-  </script>
+        #oneTapMessage {
+            /* Add your desired styles for the message container */
+            display: none; /* Initially hidden */
+        }
+    </style>
 </head>
 <body>
-  <!-- Your existing content -->
-  <button id="loginButton">Login</button>
+    <div id="g_id_onload"
+         data-client_id="462898145069-o5gme6h0o8aq4rr7e7ee3j34c50rpnsr.apps.googleusercontent.com" 
+         data-context="signin"
+         data-ux_mode="popup"
+         data-auto_prompt="true">
+    </div>
+
+    <div id="oneTapMessage"></div> 
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithCredential, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
+            authDomain: "fixespoint-app.firebaseapp.com",
+            projectId: "fixespoint-app",
+            storageBucket: "fixespoint-app.appspot.com",
+            messagingSenderId: "462898145069",
+            appId: "1:462898145069:web:b1998a949a60d39b9cd5a4",
+            measurementId: "G-03L91TT4X9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        window.onload = () => {
+            google.accounts.id.initialize({
+                client_id: "462898145069-o5gme6h0o8aq4rr7e7ee3j34c50rpnsr.apps.googleusercontent.com", 
+                callback: handleCredentialResponse,
+                scope: "profile email"
+            });
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    document.getElementById('g_id_onload').style.display = 'none';
+                } else {
+                    const lastDismissed = localStorage.getItem('oneTapLastDismissed');
+                    const currentTime = new Date().getTime();
+                    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+                    if (!lastDismissed || currentTime - lastDismissed > twentyFourHours) {
+                        if (window.location.pathname === '/login' || window.location.pathname === '/signup') {
+                            // Auto-prompt is enabled, no need to call google.accounts.id.prompt()
+                        }
+                    }
+                }
+            });
+        }
+
+        async function handleCredentialResponse(response) {
+            const credential = GoogleAuthProvider.credential(null, response.credential);
+
+            try {
+                const userCredential = await signInWithCredential(auth, credential);
+                const user = userCredential.user;
+
+                const userDoc = await getDoc(doc(db, 'users', user.uid));
+
+                if (!userDoc.exists()) {
+                    await setDoc(doc(db, 'users', user.uid), {
+                        displayName: user.displayName,
+                        email: user.email,
+                        photoURL: user.photoURL
+                    });
+                }
+
+                window.location.href = 'https://fixespoint.com/app'; 
+
+            } catch (error) {
+                showMessage("Error signing in. Please try again.", "oneTapMessage", 5000, "error");
+            }
+        }
+
+        function showMessage(message, divId, duration = 5000, type = "info") {
+            const messageDiv = document.getElementById(divId);
+
+            if (!messageDiv) {
+                return;
+            }
+
+            messageDiv.style.display = "block";
+            messageDiv.innerHTML = message;
+            messageDiv.classList.add('fade-out');
+
+            setTimeout(function () {
+                messageDiv.style.opacity = 0;
+                setTimeout(function() {
+                    messageDiv.classList.remove('fade-out');
+                    messageDiv.style.display = "none"; 
+                }, 500); 
+            }, duration);
+        }
+
+    </script>
 </body>
 </html>
