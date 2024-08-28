@@ -2,9 +2,9 @@
 <html>
 <head>
     <title>Google One Tap Integration</title>
-    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         #g_id_onload {
@@ -16,8 +16,13 @@
         }
 
         #oneTapMessage {
-            /* Add your desired styles for the message container */
             display: none; /* Initially hidden */
+        }
+        
+        /* Example of fade-out animation */
+        .fade-out {
+            transition: opacity 0.5s ease-out;
+            opacity: 1;
         }
     </style>
 </head>
@@ -32,9 +37,9 @@
     <div id="oneTapMessage"></div> 
 
     <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js';
-        import { getAuth, GoogleAuthProvider, signInWithCredential, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js';
-        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js';
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithCredential, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js';
+        import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.3/firebase-firestore.js';
 
         const firebaseConfig = {
             apiKey: "AIzaSyBdBJZnp8WC11YV6yc5HP-FAMFHD6lwerU",
@@ -68,6 +73,8 @@
                     if (!lastDismissed || currentTime - lastDismissed > twentyFourHours) {
                         if (window.location.pathname === '/login' || window.location.pathname === '/signup') {
                             // Auto-prompt is enabled, no need to call google.accounts.id.prompt()
+                        } else {
+                            google.accounts.id.prompt(); // Prompt One Tap
                         }
                     }
                 }
@@ -94,6 +101,7 @@
                 window.location.href = 'https://fixespoint.com/app'; 
 
             } catch (error) {
+                console.error("Error during sign-in: ", error);
                 showMessage("Error signing in. Please try again.", "oneTapMessage", 5000, "error");
             }
         }
@@ -114,6 +122,7 @@
                 setTimeout(function() {
                     messageDiv.classList.remove('fade-out');
                     messageDiv.style.display = "none"; 
+                    messageDiv.style.opacity = 1; // Reset opacity
                 }, 500); 
             }, duration);
         }
